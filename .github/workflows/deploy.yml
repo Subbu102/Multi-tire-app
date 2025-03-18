@@ -18,11 +18,16 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
           chmod 600 ~/.ssh/aws-key.pem
-          ls -lah ~/.ssh
-          cat ~/.ssh/aws-key.pem | head -n 5  # Verify key presence (DO NOT print full key)
+          ls -lah ~/.ssh  # Verify directory and permissions
+          head -n 5 ~/.ssh/aws-key.pem  # Verify key presence (Partial Output)
+      
+      - name: Debug EC2 Host
+        run: echo "EC2 Host: ${{ secrets.AWS_EC2_HOST }}"
 
       - name: Test SSH Connection
-        run: ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_EC2_HOST }} "echo 'SSH Connection Successful!'"
+        run: |
+          ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_EC2_HOST }} "echo '✅ SSH Connection Successful!'"
+        continue-on-error: true  # Prevents immediate failure, allowing debugging
 
       - name: Deploy JAR File
         uses: appleboy/scp-action@v0.1.4
@@ -32,6 +37,7 @@ jobs:
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
+        continue-on-error: true  # Allows debugging if deployment fails
 
       - name: Restart Application
         uses: appleboy/ssh-action@v0.1.10
@@ -41,3 +47,4 @@ jobs:
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
             sudo systemctl restart bankapp.service
+            sudo systemctl status bankapp.service --no-pager
