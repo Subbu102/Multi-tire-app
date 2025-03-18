@@ -54,7 +54,7 @@ jobs:
           source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
 
-   - name: Restart Application on EC2
+      - name: Restart Application on EC2
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
@@ -79,5 +79,3 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable bankapp.service
             sudo systemctl restart bankapp.service
-
-       
