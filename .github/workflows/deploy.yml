@@ -54,15 +54,30 @@ jobs:
           source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
 
-      - name: Restart Application on EC2
+   - name: Restart Application on EC2
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            sudo systemctl stop bankapp.service
-            sudo mv /home/ubuntu/app/bankapp.jar /home/ubuntu/app/bankapp-latest.jar
-            sudo systemctl start bankapp.service
+            echo "[Unit]
+            Description=Bank Application Service
+            After=network.target
+            
+            [Service]
+            User=ubuntu
+            ExecStart=/usr/bin/java -jar /home/ubuntu/app/bankapp.jar
+            Restart=always
+            WorkingDirectory=/home/ubuntu/app
+            StandardOutput=append:/var/log/bankapp.log
+            StandardError=append:/var/log/bankapp-error.log
+            
+            [Install]
+            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/bankapp.service
+            
+            sudo systemctl daemon-reload
+            sudo systemctl enable bankapp.service
+            sudo systemctl restart bankapp.service
 
        
