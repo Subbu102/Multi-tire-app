@@ -22,11 +22,14 @@ jobs:
       - name: Build Application
         run: mvn clean package
 
+      - name: Rename JAR for Consistency
+        run: mv target/*.jar target/bankapp.jar
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-artifact
-          path: target/*.jar
+          path: target/bankapp.jar
 
   deploy:
     needs: build
@@ -42,13 +45,13 @@ jobs:
           name: app-artifact
           path: target
 
-      - name: Copy Jar to EC2
+      - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          source: "target/*.jar"
+          source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
 
       - name: Restart Application on EC2
@@ -58,4 +61,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            sudo systemctl restart myapp.service
+            sudo systemctl stop bankapp.service
+            sudo mv /home/ubuntu/app/bankapp.jar /home/ubuntu/app/bankapp-latest.jar
+            sudo systemctl start bankapp.service
+
+       
