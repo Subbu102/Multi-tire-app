@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
 on:
   push:
@@ -6,46 +6,25 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set Up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Build Application
-        run: mvn clean package
-
-      - name: Rename JAR for Consistency
-        run: mv target/*.jar target/bankapp.jar
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-artifact
-          path: target/bankapp.jar
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifact
-          path: target
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/aws-key.pem
+          chmod 600 ~/.ssh/aws-key.pem
+          ls -lah ~/.ssh
+          cat ~/.ssh/aws-key.pem | head -n 5  # Verify key presence (DO NOT print full key)
 
-      - name: Copy JAR to EC2
+      - name: Test SSH Connection
+        run: ssh -i ~/.ssh/aws-key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_EC2_HOST }} "echo 'SSH Connection Successful!'"
+
+      - name: Deploy JAR File
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
@@ -54,28 +33,11 @@ jobs:
           source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
 
-      - name: Restart Application on EC2
+      - name: Restart Application
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            echo "[Unit]
-            Description=Bank Application Service
-            After=network.target
-            
-            [Service]
-            User=ubuntu
-            ExecStart=/usr/bin/java -jar /home/ubuntu/app/bankapp.jar
-            Restart=always
-            WorkingDirectory=/home/ubuntu/app
-            StandardOutput=append:/var/log/bankapp.log
-            StandardError=append:/var/log/bankapp-error.log
-            
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/bankapp.service
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable bankapp.service
             sudo systemctl restart bankapp.service
