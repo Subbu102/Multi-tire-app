@@ -20,7 +20,7 @@ jobs:
           chmod 600 ~/.ssh/aws-key.pem
           ls -lah ~/.ssh  # Verify directory and permissions
           head -n 5 ~/.ssh/aws-key.pem  # Verify key presence (Partial Output)
-      
+
       - name: Debug EC2 Host
         run: echo "EC2 Host: ${{ secrets.AWS_EC2_HOST }}"
 
@@ -30,17 +30,16 @@ jobs:
         continue-on-error: true  # Prevents immediate failure, allowing debugging
 
       - name: Deploy JAR File
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           source: "target/bankapp.jar"
           target: "/home/ubuntu/app/"
-        continue-on-error: true  # Allows debugging if deployment fails
 
       - name: Restart Application
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ubuntu
