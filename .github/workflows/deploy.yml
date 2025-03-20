@@ -25,14 +25,16 @@ jobs:
       - name: Rename JAR for Consistency
         run: mv target/*.jar target/bankapp.jar
 
-            - name: Build Docker Image
+      - name: Debug Docker Hub Username
+        run: echo "DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}"
+
+      - name: Build Docker Image
         run: |
           if [[ -z "${{ secrets.DOCKER_HUB_USERNAME }}" ]]; then
             echo "ERROR: DOCKER_HUB_USERNAME secret is not set!"
             exit 1
           fi
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/bankapp:latest .
-
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
