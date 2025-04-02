@@ -22,12 +22,17 @@ stages:
               jdkArchitectureOption: 'x64'
               jdkSourceOption: 'PreInstalled'
               
-
           - script: mvn clean package
             displayName: 'Build Application'
 
           - script: mv target/*.jar target/bankapp.jar
             displayName: 'Rename JAR for Consistency'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact'
+            inputs:
+              pathToPublish: 'target/bankapp.jar'
+              artifactName: 'drop'
 
   - stage: DockerBuildPush
     displayName: 'Docker Build & Push'
@@ -36,19 +41,22 @@ stages:
       - job: DockerJob
         displayName: 'Build & Push Docker Image'
         steps:
-          - script: |
-              echo "DOCKER_HUB_USERNAME=$(DOCKER_HUB_USERNAME)"
-            displayName: 'Debug Docker Hub Username'
+          - checkout: self
 
           - script: |
-              if [[ -z "$(DOCKER_HUB_USERNAME)" ]]; then
-                echo "ERROR: DOCKER_HUB_USERNAME variable is not set!"
+              echo "Validating Docker Hub credentials..."
+              if [[ -z "$(DOCKER_HUB_USERNAME)" || -z "$(DOCKER_HUB_PASSWORD)" ]]; then
+                echo "ERROR: Docker Hub credentials are not set!"
                 exit 1
               fi
+            displayName: 'Validate Credentials'
+
+          - script: |
               docker build -t $(DOCKER_HUB_USERNAME)/bankapp:latest .
             displayName: 'Build Docker Image'
 
-          - script: echo "$(DOCKER_HUB_PASSWORD)" | docker login -u "$(DOCKER_HUB_USERNAME)" --password-stdin
+          - script: |
+              echo $(DOCKER_HUB_PASSWORD) | docker login -u $(DOCKER_HUB_USERNAME) --password-stdin
             displayName: 'Log in to Docker Hub'
 
           - script: |
