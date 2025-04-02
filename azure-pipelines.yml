@@ -6,6 +6,9 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  system.debugContext: 'true'  # Enable debugging logs
+
 stages:
   - stage: Build
     displayName: 'Build Stage'
@@ -13,6 +16,9 @@ stages:
       - job: BuildJob
         displayName: 'Build and Package Application'
         steps:
+          - script: echo "Pipeline steps are being executed"
+            displayName: "Debug Pipeline Execution"
+
           - checkout: self
 
           - task: JavaToolInstaller@0
@@ -40,7 +46,11 @@ stages:
     jobs:
       - job: DockerJob
         displayName: 'Build & Push Docker Image'
+        timeoutInMinutes: 30
         steps:
+          - script: echo "Pipeline steps are being executed"
+            displayName: "Debug Pipeline Execution"
+
           - checkout: self
 
           - script: |
@@ -62,3 +72,9 @@ stages:
           - script: |
               docker push $(DOCKER_HUB_USERNAME)/bankapp:latest
             displayName: 'Push Docker Image to Docker Hub'
+
+# Repository Configuration
+resources:
+  repositories:
+    - repository: self
+      type: git
