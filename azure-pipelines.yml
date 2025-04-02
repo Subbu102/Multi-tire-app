@@ -1,0 +1,55 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build and Package Application'
+        steps:
+          - task: Checkout@1
+            displayName: 'Checkout Code'
+
+          - task: UseJavaVersion@1
+            displayName: 'Set Up Java'
+            inputs:
+              versionSpec: '17'
+              jdkArchitecture: 'x64'
+
+          - script: mvn clean package
+            displayName: 'Build Application'
+
+          - script: mv target/*.jar target/bankapp.jar
+            displayName: 'Rename JAR for Consistency'
+
+  - stage: DockerBuildPush
+    displayName: 'Docker Build & Push'
+    dependsOn: Build
+    jobs:
+      - job: DockerJob
+        displayName: 'Build & Push Docker Image'
+        steps:
+          - script: |
+              echo "DOCKER_HUB_USERNAME=$(DOCKER_HUB_USERNAME)"
+            displayName: 'Debug Docker Hub Username'
+
+          - script: |
+              if [[ -z "$(DOCKER_HUB_USERNAME)" ]]; then
+                echo "ERROR: DOCKER_HUB_USERNAME variable is not set!"
+                exit 1
+              fi
+              docker build -t $(DOCKER_HUB_USERNAME)/bankapp:latest .
+            displayName: 'Build Docker Image'
+
+          - script: echo "$(DOCKER_HUB_PASSWORD)" | docker login -u "$(DOCKER_HUB_USERNAME)" --password-stdin
+            displayName: 'Log in to Docker Hub'
+
+          - script: |
+              docker push $(DOCKER_HUB_USERNAME)/bankapp:latest
+            displayName: 'Push Docker Image to Docker Hub'
