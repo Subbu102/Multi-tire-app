@@ -13,15 +13,15 @@ stages:
       - job: BuildJob
         displayName: 'Build and Package Application'
         steps:
-          - task: Checkout@1
-            displayName: 'Checkout Code'
+          - checkout: self
 
           - task: JavaToolInstaller@0
             displayName: 'Set Up Java'
             inputs:
               versionSpec: '17'
-              jdkArchitecture: 'x64'
-              jdkSource: 'PreInstalled'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+              
 
           - script: mvn clean package
             displayName: 'Build Application'
